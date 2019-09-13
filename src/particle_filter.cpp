@@ -30,8 +30,25 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 0;  // TODO: Set the number of particles
+  num_particles = 10;  // TODO: Set the number of particles
 
+  std::default_random_engine gen;
+
+  std::normal_distribution<double> dist_x(x, std[0]);
+  std::normal_distribution<double> dist_y(y, std[1]);
+  std::normal_distribution<double> dist_theta(theta, std[2]);
+
+  for (int i = 0; i < num_particles; ++i) {
+    Particle p = new Particle();
+    p.id = i;
+    p.x = dist_x(gen);
+    p.y = dist_y(gen);
+    p.theta = dist_theta(gen);
+    p.weight = 1.0;
+    particles.push_back(p);
+  }
+
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -43,6 +60,33 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  std::default_random_engine gen;
+
+  for (int i = 0; i < num_particles; ++i) {
+    double x0 = particles[i].x;
+    double y0 = particles[i].y;
+    double theta0 = particles[i].theta;
+    double xf, yf, thetaf;
+
+    if (fabs(yaw_rate) < 0.0001) {
+      xf = x0 + velocity * cos(theta0) * delta_t;
+      yf = y0 + velocity * sin(theta0) * delta_t;
+      thetaf = theta0;
+    }
+    else {
+      xf = x0 + (velocity / yaw_rate) * (sin(theta0 + yaw_rate * delta_t) - sin(theta0));
+      yf = y0 + (velocity / yaw_rate) * (cos(theta0) - cos(theta0 + yaw_rate * delta_t));
+      thetaf = theta0 + yaw_rate * delta_t;
+    }
+
+    std::normal_distribution<double> dist_xf(xf, std_pos[0]);
+    std::normal_distribution<double> dist_yf(yf, std_pos[1]);
+    std::normal_distribution<double> dist_thetaf(thetaf, std_pos[2]);
+
+    particles[i].x = dist_xf(gen);
+    particles[i].y = dist_yf(gen);
+    particles[i].theta = dist_thetaf(gen);
+  }
 
 }
 
