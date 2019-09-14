@@ -100,6 +100,19 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper 
    *   during the updateWeights phase.
    */
+  for (int i = 0; i < observations.size(); ++i) {
+    LandmarkObs obs = observations[i];
+    int id = -1;
+    double min_dist = std::numeric_limits<double>::max();
+    for (LandmarkObs pre : predicted) {
+      double d = dist(obs.x, obs.y, pre.x, pre.y);
+      if (d < min_dist) {
+        id = pre.id;
+        min_dist = d;
+      }
+    }
+    observations[i].id = id;
+  }
 
 }
 
@@ -120,6 +133,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
 
+
 }
 
 void ParticleFilter::resample() {
@@ -130,6 +144,54 @@ void ParticleFilter::resample() {
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
 
+}
+
+LandmarkObs ParticleFilter::TransformCoords(Particle par, LandmarkObs obs) {
+  LandmarkObs transformed_obs = new LandmarkObs {
+    obs.id,
+    obs.x * cos(par.theta) - obs.y * sin(par.theta) + par.x,
+    obs.x * sin(par.theta) + obs.y * cos(par.theta) + par.y
+  };
+  return transformed_obs;
+}
+
+LandmarkObs ParticleFilter::LandmarkAssociation(LandmarkObs obs, Map map_landmarks) {
+  double min_dist = std::numeric_limits<double>::max();
+  LandmarkObs best_association;
+  for (single_landmark_s landmark : map_landmarks.landmark_list) {
+    double d = dist(obs.x, obs.y, landmark.x_f, landmark.y_f);
+    if (d < min_dist) {
+      best_association.id = landmark.id;
+      best_association.x = landmark.x_f;
+      best_association.y = landmark.y_f;
+      min_dist = d;
+    }
+  }
+  return best_association;
+}
+
+double ParticleFilter::WeightCalculation(LandmarkObs obs, LandmarkObs best, double std_landmark) {
+  double sig_x = std_landmark[0];
+  double sig_y = std_landmark[1];
+  double x_obs = obs.x;
+  double y_obs = obs.y;
+  double mu_x = best.x;
+  double mu_y = best.y;
+
+  // calculate normalization term
+  double gauss_norm;
+  gauss_norm = 1 / (2 * M_PI * sig_x * sig_y);
+
+  // calculate exponent
+  double exponent;
+  exponent = (pow(x_obs - mu_x, 2) / (2 * pow(sig_x, 2)))
+               + (pow(y_obs - mu_y, 2) / (2 * pow(sig_y, 2)));
+    
+  // calculate weight using normalization terms and exponent
+  double weight;
+  weight = gauss_norm * exp(-exponent);
+
+  return weight;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, 
