@@ -133,7 +133,24 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
 
+  // Reset weights
+  weights.clear();
 
+  for (int i = 0; i < num_particles; ++i) {
+    double prob = 1.0;
+    for (LandmarkObs obs : observations) {
+      // 1. Transform the observation to the coordinates of the map
+      LandmarkObs transformed_obs = TransformCoords(particles[i], obs);
+      // 2. Find the nearest landmark to the (transformed) observation
+      LandmarkObs best_association = LandmarkAssociation(transformed_obs, map_landmarks);
+      // 3. Calculate the error between observation and the landmark
+      error = CalculateWeight(transformed_obs, best_association, std_landmark);
+      // 4. Accumulate the error for each particle
+      prob *= error;
+    }
+    particles[i].weight = prob;
+    weights.push_back(prob);
+  }
 }
 
 void ParticleFilter::resample() {
@@ -170,7 +187,7 @@ LandmarkObs ParticleFilter::LandmarkAssociation(LandmarkObs obs, Map map_landmar
   return best_association;
 }
 
-double ParticleFilter::WeightCalculation(LandmarkObs obs, LandmarkObs best, double std_landmark) {
+double ParticleFilter::CalculateWeight(LandmarkObs obs, LandmarkObs best, double std_landmark) {
   double sig_x = std_landmark[0];
   double sig_y = std_landmark[1];
   double x_obs = obs.x;
