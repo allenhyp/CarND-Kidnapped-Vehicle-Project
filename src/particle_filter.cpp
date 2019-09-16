@@ -30,7 +30,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 10;  // TODO: Set the number of particles
+  num_particles = 15;  // TODO: Set the number of particles
 
   std::default_random_engine gen;
 
@@ -39,7 +39,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   std::normal_distribution<double> dist_theta(theta, std[2]);
 
   for (int i = 0; i < num_particles; ++i) {
-    Particle p = new Particle();
+    Particle p;
     p.id = i;
     p.x = dist_x(gen);
     p.y = dist_y(gen);
@@ -100,7 +100,7 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper 
    *   during the updateWeights phase.
    */
-  for (int i = 0; i < observations.size(); ++i) {
+  for (uint i = 0; i < observations.size(); ++i) {
     LandmarkObs obs = observations[i];
     int id = -1;
     double min_dist = std::numeric_limits<double>::max();
@@ -144,7 +144,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       // 2. Find the nearest landmark to the (transformed) observation
       LandmarkObs best_association = LandmarkAssociation(transformed_obs, map_landmarks);
       // 3. Calculate the error between observation and the landmark
-      error = CalculateWeight(transformed_obs, best_association, std_landmark);
+      double error = CalculateWeight(transformed_obs, best_association, std_landmark);
       // 4. Accumulate the error for each particle
       prob *= error;
     }
@@ -160,11 +160,20 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
+  vector<Particle> new_particles;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::discrete_distribution<int> dd(weights.begin(), weights.end());
 
+  for (int i = 0; i < num_particles; ++i) {
+    new_particles.push_back(particles[dd(gen)]);
+  }
+
+  particles = new_particles;
 }
 
 LandmarkObs ParticleFilter::TransformCoords(Particle par, LandmarkObs obs) {
-  LandmarkObs transformed_obs = new LandmarkObs {
+  LandmarkObs transformed_obs = {
     obs.id,
     obs.x * cos(par.theta) - obs.y * sin(par.theta) + par.x,
     obs.x * sin(par.theta) + obs.y * cos(par.theta) + par.y
@@ -175,10 +184,10 @@ LandmarkObs ParticleFilter::TransformCoords(Particle par, LandmarkObs obs) {
 LandmarkObs ParticleFilter::LandmarkAssociation(LandmarkObs obs, Map map_landmarks) {
   double min_dist = std::numeric_limits<double>::max();
   LandmarkObs best_association;
-  for (single_landmark_s landmark : map_landmarks.landmark_list) {
+  for (Map::single_landmark_s landmark : map_landmarks.landmark_list) {
     double d = dist(obs.x, obs.y, landmark.x_f, landmark.y_f);
     if (d < min_dist) {
-      best_association.id = landmark.id;
+      best_association.id = landmark.id_i;
       best_association.x = landmark.x_f;
       best_association.y = landmark.y_f;
       min_dist = d;
@@ -187,7 +196,7 @@ LandmarkObs ParticleFilter::LandmarkAssociation(LandmarkObs obs, Map map_landmar
   return best_association;
 }
 
-double ParticleFilter::CalculateWeight(LandmarkObs obs, LandmarkObs best, double std_landmark) {
+double ParticleFilter::CalculateWeight(LandmarkObs obs, LandmarkObs best, double std_landmark[]) {
   double sig_x = std_landmark[0];
   double sig_y = std_landmark[1];
   double x_obs = obs.x;

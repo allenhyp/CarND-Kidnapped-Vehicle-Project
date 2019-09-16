@@ -103,6 +103,13 @@ class ParticleFilter {
   }
 
   /**
+   * Methods for updating weights
+   */
+  LandmarkObs TransformCoords(Particle par, LandmarkObs obs);
+  LandmarkObs LandmarkAssociation(LandmarkObs obs, Map map_landmarks);
+  double CalculateWeight(LandmarkObs obs, LandmarkObs best, double std_landmark[]);
+
+  /**
    * Used for obtaining debugging information related to particles.
    */
   std::string getAssociations(Particle best);
