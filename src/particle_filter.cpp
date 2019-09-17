@@ -30,7 +30,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method 
    *   (and others in this file).
    */
-  num_particles = 15;  // TODO: Set the number of particles
+  num_particles = 10;  // TODO: Set the number of particles
 
   std::default_random_engine gen;
 
@@ -90,6 +90,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
 
 }
 
+// Unused function
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted, 
                                      vector<LandmarkObs>& observations) {
   /**
